@@ -133,13 +133,16 @@
       <div class="divider"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div><div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em">Total</div><div style="font-size:40px;font-weight:700;color:#FFD600" id="total-score-display">0</div><div style="font-size:11px;color:#555">out of 100</div></div>
-        <button class="btn-y" id="btn-submit-score" style="width:auto;padding:12px 28px">Submit →</button>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:140px">
+          <button class="btn-y" id="btn-submit-score" style="width:auto;padding:12px 28px">Submit →</button>
+          <button class="btn-ghost" id="btn-save-progress" style="font-size:12px;padding:8px 16px;text-align:center">Save &amp; continue later</button>
+        </div>
       </div>
       <div id="board-score-msg" style="margin-top:8px"></div>
     </div>
     <div id="board-all-done" style="display:none" class="card-yellow">
       <div style="font-size:22px;font-weight:700;color:#111;margin-bottom:6px">All done!</div>
-      <div style="font-size:13px;color:#555">You've scored all 10 departments. Thank you!</div>
+      <div style="font-size:13px;color:#555">You've scored all 9 departments. Thank you!</div>
       <button class="btn-dark" id="btn-board-done-home" style="margin-top:1rem;width:auto;padding:10px 24px">Back to home</button>
     </div>
   </div>
@@ -174,7 +177,7 @@
     <div id="staff-voting-closed" class="card-dark" style="text-align:center;padding:2rem">
       <div style="width:56px;height:56px;background:#222;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:2px solid #333"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD600" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div>
       <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">Voting not yet open</div>
-      <div style="font-size:13px;color:#888;margin-bottom:1.5rem">The host will open staff voting after all 10 departments have presented.</div>
+      <div style="font-size:13px;color:#888;margin-bottom:1.5rem">The host will open staff voting after all 9 departments have presented.</div>
       <button class="btn-y" id="btn-staff-check">Check now</button>
     </div>
     <div id="staff-voting-open" style="display:none">
@@ -213,7 +216,7 @@
       <input type="password" id="admin-pwd-input" placeholder="Enter admin password">
       <div id="admin-pwd-error" class="error" style="display:none"></div>
       <button class="btn-y" id="btn-admin-enter" style="margin-top:1rem">Enter →</button>
-      <div style="font-size:12px;color:#555;margin-top:10px">Default: <span style="color:#FFD600;font-weight:600">catalyst2025</span></div>
+      
     </div>
   </div>
 </div>
@@ -296,7 +299,7 @@
 const SUPABASE_URL = "https://qldctyjfuqzhpszvafqy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5SgejD0rXvfwa65b-i9TeA_UJ3zMSAr";
 
-const BOARD_SEQ = ["Investment","Sustainability","Sales","Middle Office","Risk","Compliance","Legal","Operations","Product","Strategy"];
+const BOARD_SEQ = ["Investment","Sustainability","Strategy","Sales","Middle Office","Risk","Compliance","Legal","Operations"];
 const ALL_DEPTS = [...BOARD_SEQ];
 const ADMIN_PWD = "catalyst2025";
 
@@ -403,6 +406,24 @@ document.getElementById("btn-board-continue").onclick = async function() {
 
 document.getElementById("btn-go-back-dept").onclick = function() {
   if (currentJudgeDeptIndex > 0) { currentJudgeDeptIndex--; renderBoardScore(); }
+};
+
+document.getElementById("btn-save-progress").onclick = async function() {
+  const dept = BOARD_SEQ[currentJudgeDeptIndex];
+  const impact = +document.getElementById("slider-impact").value;
+  const innovation = +document.getElementById("slider-innovation").value;
+  const presentation = +document.getElementById("slider-presentation").value;
+  const total = impact + innovation + presentation;
+  const msg = document.getElementById("board-score-msg");
+  msg.className = ""; msg.textContent = "Saving...";
+  const existing = await sbGet("board_scores", `judge_name=eq.${encodeURIComponent(currentJudgeName)}&department=eq.${encodeURIComponent(dept)}&select=id`);
+  if (existing && existing.length > 0) {
+    await sbUpdate("board_scores", { judge_name: currentJudgeName, department: dept }, { impact, innovation, presentation, total });
+  } else {
+    await sbInsert("board_scores", { judge_name: currentJudgeName, department: dept, impact, innovation, presentation, total });
+  }
+  msg.className = "success-msg";
+  msg.textContent = "Progress saved! You can come back and continue later.";
 };
 
 document.getElementById("btn-submit-score").onclick = async function() {
